@@ -50,18 +50,6 @@ class ArduinoHandler(object):
             shutil.rmtree(self.build_dir)
 
     def start(self):
-        rospy.loginfo("Updating arduino")
-        try:
-            proc = subprocess.Popen(
-                [
-                    "openag", "firmware", "run", "-p", "ros", "-t",
-                    "upload"
-                ], cwd=self.build_dir, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            self.handle_process(proc, Exception())
-        except Exception:
-            rospy.logerr("Failed to update Arduino")
         rospy.loginfo("Starting to read from Arduino")
         self.serial_node = subprocess.Popen([
             "rosrun", "rosserial_python", "serial_node.py", "/dev/ttyACM0"
