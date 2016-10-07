@@ -31,15 +31,6 @@ from openag_brain import commands, params
 class ArduinoHandler(object):
     def __init__(self):
         self.serial_node = None
-        self.build_dir = tempfile.mkdtemp()
-        rospy.loginfo("Initializing firmware project for arduino")
-        proc = subprocess.Popen(
-            ["openag", "firmware", "init"], cwd=self.build_dir,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        self.handle_process(proc, RuntimeError(
-            "Failed to iniailize OpenAg firmware project"
-        ))
 
     def __del__(self):
         if self.serial_node is not None and self.serial_node.poll():
