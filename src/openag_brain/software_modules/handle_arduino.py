@@ -17,8 +17,6 @@ import time
 import rospy
 import atexit
 import select
-import tempfile
-import argparse
 import traceback
 import subprocess
 from openag.cli.config import config as cli_config

@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+
+import tempfile
+from openag_brain.commands import flash_arduino
+
+if __name__ == '__main__':
+    build_dir = tempfile.mkdtemp()
+    flash_arduino(build_dir)
