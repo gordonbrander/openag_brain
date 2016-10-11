@@ -2,6 +2,8 @@ import rospy
 import subprocess
 from openag_brain.util import handle_process
 
+rospy.init_node("flash_arduino", anonymous=True)
+
 def flash_arduino(build_dir):
 	# Create temporary dir for building Arduino code
     rospy.loginfo("Initializing firmware project for Arduino")

@@ -1,5 +1,6 @@
-import requests
 from importlib import import_module
+import select
+import rospy
 
 __all__ = ['resolve_message_type']
 
