@@ -4,7 +4,6 @@ from openag_brain.util import handle_process
 
 def flash_arduino(build_dir):
 	# Create temporary dir for building Arduino code
-    build_dir = tempfile.mkdtemp()
     rospy.loginfo("Initializing firmware project for Arduino")
     proc = subprocess.Popen(
         ["openag", "firmware", "init"],
