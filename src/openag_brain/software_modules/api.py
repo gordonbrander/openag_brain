@@ -144,14 +144,13 @@ def perform_start_recipe():
 @app.route("/api/{v}/{srv}".format(v=API_VER, srv=STOP_RECIPE), methods=["POST"])
 def perform_stop_recipe():
     """
-    POST /api/<version>/stop_recipe {"environment": <id>, "recipe_id": <id>}
+    POST /api/<version>/stop_recipe
 
-    Stop a recipe by POSTing its recipe_id and environment.
+    Stop whatever recipe is currently running by POSTing its environment.
     """
     try:
         args = request.get_json()
         environment = args['environment']
-        recipe_id = args['recipe_id']
     except KeyError as e:
         return error(e)
     # Create service name from environment passed in JSON arguments.
@@ -166,7 +165,7 @@ def perform_stop_recipe():
     # the service.
     stop_recipe = rospy.ServiceProxy(service_name, Empty)
     try:
-        res = stop_recipe(recipe_id)
+        res = stop_recipe()
     except rospy.ServiceException as e:
         return error(e)
     status_code = 200 if getattr(res, "success", True) else 400
