@@ -125,6 +125,7 @@ def perform_service_call(service_name):
     except rospy.ROSException as e:
         raise socket.error()
     try:
+        rospy.ServiceProxy(service_name, openag_brain.srv[service_name])
         res = rosservice.call_service(service_name, [args])[1]
     except rosservice.ROSServiceException as e:
         return error(e)
