@@ -110,7 +110,7 @@ def get_service_info(service_name):
     })
 
 @app.route("/api/{v}/{srv}".format(v=API_VER, srv=START_RECIPE), methods=["POST"])
-def perform_start_recipe(service_name):
+def perform_start_recipe():
     """
     POST /api/<version>/start_recipe {"environment": <id>, "recipe_id": <id>}
 
@@ -137,7 +137,7 @@ def perform_start_recipe(service_name):
     return jsonify(data), status_code
 
 @app.route("/api/{v}/{srv}".format(v=API_VER, srv=STOP_RECIPE), methods=["POST"])
-def perform_stop_recipe(service_name):
+def perform_stop_recipe():
     """
     POST /api/<version>/stop_recipe {"environment": <id>, "recipe_id": <id>}
 
