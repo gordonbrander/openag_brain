@@ -143,9 +143,14 @@ def perform_stop_recipe():
 
     Stop a recipe by POSTing its recipe_id and environment.
     """
-    args = request.get_json()
+    try:
+        args = request.get_json()
+        environment = args['environment']
+        recipe_id = args['recipe_id']
+    except KeyError as e:
+        return error(e)
     # Create service name from environment passed in JSON arguments.
-    service_name = '/{env}/{srv}'.format(env=args.environment, srv=STOP_RECIPE)
+    service_name = '/{env}/{srv}'.format(env=environment, srv=STOP_RECIPE)
     # Wait for service to be ready before attempting to use it.
     try:
         rospy.wait_for_service(service_name, 1)
