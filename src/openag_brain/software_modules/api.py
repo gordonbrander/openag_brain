@@ -7,7 +7,9 @@ system.
 """
 import gevent.monkey; gevent.monkey.patch_all()
 
+from sys import stdout
 import socket
+import subprocess
 
 import rospy
 import rostopic
@@ -125,11 +127,11 @@ def perform_service_call(service_name):
     except rospy.ROSException as e:
         raise socket.error()
     try:
-        res = rosservice.call_service(service_name, [args])[1]
+        command = ['rosservice', 'call', service_name] + args
+        res = subprocess.check_output(command).decode(stdout.encoding)
     except rosservice.ROSServiceException as e:
         return error(e)
-    status_code = 200 if getattr(res, "success", True) else 400
-    data = {k: getattr(res, k) for k in res.__slots__}
+    data = {msg: res}
     return jsonify(data), status_code
 
 @app.route("/api/{v}/topic".format(v=API_VER), methods=["GET"])
@@ -278,6 +280,7 @@ def get_node_info(node_name):
     })
 
 if __name__ == '__main__':
+    rospy.init_node('api')
     server = WSGIServer(('', 5000), app)
     try:
         rospy.loginfo("API now listening on http://0.0.0.0:5000")
