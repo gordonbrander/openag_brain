@@ -309,6 +309,7 @@ def get_node_info(node_name):
     })
 
 if __name__ == '__main__':
+    rospy.init_node("api")
     server = WSGIServer(('', 5000), app)
     try:
         rospy.loginfo("API now listening on http://0.0.0.0:5000")
