@@ -133,7 +133,10 @@ def perform_service_call(service_name):
         rospy.wait_for_service(service_name, 1)
     except rospy.ROSException as e:
         raise socket.error()
-    args = request.get_json()
+    # Get JSON args if they exist. If they don't, treat as if empty array
+    # was passed.
+    json = request.get_json(silent=True)
+    args = json if json else []
     service_proxy = rospy.ServiceProxy(service_name, ServiceClass)
     try:
         # Unpack the list of args and pass to service_proxy function.
