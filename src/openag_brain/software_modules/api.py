@@ -125,7 +125,7 @@ def perform_service_call(service_name):
     # with this service.
     try:
         ServiceClass = rosservice.get_service_class_by_name(service_name)
-    except rospy.ROSServiceException as e:
+    except rosservice.ROSServiceException as e:
         return error(e)
     # If we made it this far, the service exists.
     # Wait for service to be ready before attempting to use it.
