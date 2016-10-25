@@ -138,7 +138,7 @@ def perform_service_call(service_name):
     try:
         # Unpack the list of args and pass to service_proxy function.
         res = service_proxy(*args)
-    except rospy.ServiceException as e:
+    except (rospy.ServiceException, TypeError) as e:
         return error(e)
     status_code = 200 if getattr(res, "success", True) else 400
     data = {k: getattr(res, k) for k in res.__slots__}
