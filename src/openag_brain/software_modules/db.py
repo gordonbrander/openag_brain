@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Manages starting up and shutting down the CouchDB database.
+This node can be used to start up the CouchDB database from a roslaunch file.
 """
 import rospy
 import subprocess
