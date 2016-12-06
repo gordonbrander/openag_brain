@@ -13,7 +13,6 @@ expected. There should be exactly one instance of this module in the system
 import sys
 import time
 import rospy
-import rosgraph
 import rostopic
 from openag.cli.config import config as cli_config
 from openag.utils import synthesize_firmware_module_info
