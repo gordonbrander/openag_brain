@@ -44,16 +44,7 @@ def connect_topics(
     sub = rospy.Subscriber(src_topic, src_topic_type, callback)
     return sub, pub
 
-def connect_all_topics(module_db, module_type_db):
-    modules = {
-        module_id: FirmwareModule(module_db[module_id]) for module_id in
-        module_db if not module_id.startswith('_')
-    }
-    module_types = {
-        type_id: FirmwareModuleType(module_type_db[type_id]) for type_id in
-        module_type_db if not type_id.startswith("_")
-    }
-    modules = synthesize_firmware_module_info(modules, module_types)
+def connect_all_topics(modules):
     for module_id, module_info in modules.items():
         for input_name, input_info in module_info["inputs"].items():
             if not "actuators" in input_info["categories"]:
@@ -82,13 +73,45 @@ def connect_all_topics(module_db, module_type_db):
                 src_topic, dest_topic, src_topic_type, dest_topic_type
             )
 
+def read_modules_from_db(db):
+    return {
+        module_id: FirmwareModule(module_db[module_id]) for module_id in
+        module_db if not module_id.startswith('_')
+    }
+
+def read_module_types_from_db(db):
+    return {
+        type_id: FirmwareModuleType(module_type_db[type_id]) for type_id in
+        module_type_db if not type_id.startswith("_")
+    }
+
+def read_modules_from_file(config):
+    return { module["_id"]: FirmwareModule(module) for module in config}
+
+def read_module_types_from_file(config):
+    return { module["_id"]: FirmwareModuleType(module) for module in config}
+
 if __name__ == '__main__':
     rospy.init_node("topic_connector")
+
+    # Get modules config from file or db
+    modules_file = rospy.get_param("~modules_file")
     db_server = cli_config["local_server"]["url"]
-    if not db_server:
+
+    if modules_file:
+        with json.load(modules_file) as config:
+            modules = read_modules_from_file(config[FIRMWARE_MODULE])
+            module_types = read_module_types_from_file(
+                config[FIRMWARE_MODULE_TYPE]
+            )
+            synthesized = synthesize_firmware_module_info(modules, module_types)
+            connect_all_topics(synthesized)
+    elif db_server:
+        server = Server(db_server)
+        modules = read_modules_from_db(server[FIRMWARE_MODULE])
+        module_types = read_module_types_from_db(server[FIRMWARE_MODULE_TYPE])
+        synthesized = synthesize_firmware_module_info(modules, module_types)
+        connect_all_topics(synthesized)
+    else:
         raise RuntimeError("No local server specified")
-    server = Server(db_server)
-    module_db = server[FIRMWARE_MODULE]
-    module_type_db = server[FIRMWARE_MODULE_TYPE]
-    connect_all_topics(module_db, module_type_db)
     rospy.spin()
