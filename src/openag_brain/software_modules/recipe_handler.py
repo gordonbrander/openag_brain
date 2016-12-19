@@ -162,16 +162,17 @@ class RecipeHandler(object):
         )
 
     def publish_set_points(self):
-        if rospy.is_shutdown():
-            return
-        for variable, value in self.current_set_points.items():
-            if variable in self.valid_variables:
-                self.publishers[variable].publish(value)
-            else:
-                rospy.logwarn('Recipe references invalid variable "{}"'.format(
-                    variable
-                ))
-        Timer(5, self.publish_set_points).start()
+        # If recipe is running and ros is running...
+        if self.recipe_flag.is_set() and not rospy.is_shutdown():
+            for variable, value in self.current_set_points.items():
+                if variable in self.valid_variables:
+                    self.publishers[variable].publish(value)
+                else:
+                    rospy.logwarn('Recipe references invalid variable "{}"'.format(
+                        variable
+                    ))
+            # Schedule another publish for current setpoints in 5s
+            Timer(5, self.publish_set_points).start()
 
     def start_recipe(self, data, start_time=None):
         recipe_id = data.recipe_id
