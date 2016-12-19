@@ -130,9 +130,6 @@ class RecipeHandler(object):
         rospy.set_param(params.CURRENT_RECIPE, "")
         rospy.set_param(params.CURRENT_RECIPE_START, 0)
 
-        # Start publishing set points
-        self.publish_set_points()
-
         # Get the recipe that has been started most recently
         start_view = self.env_data_db.view("openag/by_variable", startkey=[
             self.environment, "desired", RECIPE_START.name
@@ -203,7 +200,10 @@ class RecipeHandler(object):
         self.env_data_db[point_id] = point
         rospy.set_param(params.CURRENT_RECIPE, recipe_id)
         rospy.set_param(params.CURRENT_RECIPE_START, start_time)
+        # Set recipe_flag to indicate recipe is running.
         self.recipe_flag.set()
+        # Start publishing set points
+        self.publish_set_points()
         rospy.loginfo('Starting recipe "{}"'.format(recipe_id))
         return True, "Success"
 
