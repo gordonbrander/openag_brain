@@ -226,6 +226,15 @@ class RecipeHandler(object):
                 if variable in self.valid_variables:
                     self.current_set_points[variable] = value
                     self.publishers[variable].publish(value)
+                    point = EnvironmentalDataPoint({
+                        "environment": self.environment,
+                        "variable": variable,
+                        "is_desired": True,
+                        "value": value,
+                        "timestamp": timestamp
+                    })
+                    point_id = self.gen_doc_id(timestamp)
+                    self.env_data_db[point_id] = point
                 else:
                     rospy.logwarn('Recipe references invalid variable "{}"'.format(
                         variable
