@@ -1,7 +1,24 @@
+#!/usr/bin/python
+"""
+The `recipe_handler.py` module is in charge of running recipes. It provides a
+service `/<environment_id>/start_recipe` which takes as input a recipe ID and
+starts the recipe. It also provides a service `/<environment_id>/stop_recipe`
+which takes no inputs and stops the currently running recipe. It defines a
+parameter `current_recipe` which stores the ID of the currently running recipe.
+It also defines a parameter `current_recipe_start` which stores the UNIX
+timestamp at which the currently running recipe was started. If no recipe is
+running, `current_recipe` will be set to an empty string and
+`current_recipe_start` will be set to 0. There should always be exactly one
+instance of this module per environment in the system.
+"""
+
 import time
-from time import sleep
+import rospy
+from rospy import sleep
 from multiprocessing import Process, Queue, Event
 from Queue import Empty
+
+from couchdb import Server
 
 from openag.db_names import ENVIRONMENTAL_DATA_POINT, RECIPE
 from openag.var_types import RECIPE_START, RECIPE_END
@@ -161,6 +178,8 @@ class RecipeHandler:
         for timestamp, variable, value in wrap_recipe(recipe, self.recipe_flag):
             pub = publisher_memo("desired/{}".format(topic), Float64, 10)
             pub(value)
+            # @TODO ideally, this should be handled in a separate
+            # desired_persistence ros node.
             record = EnvironmentalDataPoint({
                 "environment": self.environment,
                 "variable": variable,
@@ -182,7 +201,7 @@ class RecipeHandler:
         self.recipe_flag.clear()
         return self
 
-    def start_recipe(self, data, start_time=None):
+    def start_recipe_service(self, data, start_time=None):
         recipe_id = data.recipe_id
         if not recipe_id:
             return False, "No recipe id was specified"
@@ -195,23 +214,13 @@ class RecipeHandler:
             return False, "\"{}\" does not reference a valid "\
             "recipe".format(recipe_id)
         start_time = start_time or time.time()
-        self.current_recipe = self.recipe_class_map[
-            recipe.get("format", "simple")
-        ](
-            recipe_id, recipe["operations"], start_time
-        )
-        point = EnvironmentalDataPoint({
-            "environment": self.environment,
-            "variable": RECIPE_START.name,
-            "is_desired": True,
-            "value": recipe_id,
-            "timestamp": start_time
-        })
-        point_id = self.gen_doc_id(start_time)
-        self.env_data_db[point_id] = point
+        recipe_format = recipe.get("format", "simple")
+        RecipeInterpreter = RECIPE_INTERPRETERS[recipe_format]
+        recipe = RecipeInterpreter(recipe, start_time)
         rospy.set_param(params.CURRENT_RECIPE, recipe_id)
         rospy.set_param(params.CURRENT_RECIPE_START, start_time)
-        self.recipe_flag.set()
+        proc = Process(target=self.run_recipe, recipe)
+        proc.start()
         rospy.loginfo('Starting recipe "{}"'.format(recipe_id))
         return True, "Success"
 
@@ -235,39 +244,39 @@ class RecipeHandler:
         )
         return self
 
-if __name__ == '__main__':
-    import json
-    recipe_script = json.loads("""
-    {
-       "_id": "recipe1",
-       "_rev": "4-4b1c1f6c41c02014e43e75d58de0fca5",
-       "operations": [
-           [
-               0,
-               "air_temperature",
-               26
-           ],
-           [
-               0,
-               "air_humidity",
-               50
-           ],
-           [
-               20,
-               "air_temperature",
-               27
-           ],
-           [
-               30,
-               "air_temperature",
-               30
-           ]
-       ],
-       "format": "simple"
-    }
-    """)
-    recipe = SimpleRecipe(recipe_script, time.time())
-    for d in wrap_recipe_interpolate(recipe):
-        print(d)
+    def resume(self):
+        """Attempt to resume any previous state"""
+                # Get the recipe that has been started most recently
+        start_view = self.env_data_db.view("openag/by_variable", startkey=[
+            self.environment, "desired", RECIPE_START.name
+        ], endkey=[
+            self.environment, "desired", RECIPE_START.name, {}
+        ], group_level=3)
+        if len(start_view) == 0:
+            return
+        start_doc = start_view.rows[0].value
 
-    # rospy.spin()
+        # If a recipe has been ended more recently than the most recent time a
+        # recipe was started, don't run the recipe
+        end_view = self.env_data_db.view("openag/by_variable", startkey=[
+            self.environment, "desired", RECIPE_END.name,
+        ], endkey=[
+            self.environment, "desired", RECIPE_END.name, {}
+        ], group_level=3)
+        if len(end_view):
+            end_doc = end_view.rows[0].value
+            if (end_doc["timestamp"] > start_doc["timestamp"]):
+                return
+
+if __name__ == '__main__':
+    namespace = rospy.get_namespace()
+    environment = self.namespace.split('/')[-2]
+    db_server = cli_config["local_server"]["url"]
+    if not db_server:
+        raise RuntimeError("No local database specified")
+    server = Server(db_server)
+    handler = RecipeHandler(server, environment)
+    handler.register_services()
+    handler.resume()
+
+    rospy.spin()
