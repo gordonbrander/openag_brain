@@ -14,18 +14,18 @@ instance of this module per environment in the system.
 
 import time
 import rospy
-from rospy import sleep
-from multiprocessing import Process, Event
-from couchdb import Server
-
 from openag.db_names import ENVIRONMENTAL_DATA_POINT, RECIPE
-from openag.var_types import RECIPE_START, RECIPE_END
+from openag.cli.config import config as cli_config
 from openag.models import EnvironmentalDataPoint
+from openag.var_types import RECIPE_START, RECIPE_END
+from couchdb import Server
+from std_msgs.msg import Float64
+from multiprocessing import Process, Event
 from openag_brain import params, services
 from openag_brain.srv import StartRecipe, Empty
+from openag_brain.utils import gen_doc_id
 from openag_brain.memoize import memoize
 from openag_brain.multidispatch import multidispatch
-from openag_brain.utils import gen_doc_id
 
 class EventAlreadySetError(Exception):
     pass
