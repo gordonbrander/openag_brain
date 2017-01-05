@@ -242,7 +242,7 @@ class RecipeHandler:
 if __name__ == '__main__':
     rospy.init_node('recipe_handler')
     namespace = rospy.get_namespace()
-    environment = self.namespace.split('/')[-2]
+    environment = namespace.split('/')[-2]
     db_server = cli_config["local_server"]["url"]
     if not db_server:
         raise RuntimeError("No local database specified")
