@@ -4,15 +4,7 @@ Implements naive unbounded memoization.
 @NOTE if we ever switch to Python 3.x, we should use functools.lru_cache
 decorator instead which serves the same purpose (and with more nifty features).
 """
-
-class MemoCache(dict):
-    def __init__(self, f):
-        self.raw = f
-
-    def __call__(self, *args):
-        if not args in self:
-            self[args] = self.raw(*args)
-        return self[args]
+from functools import wraps
 
 def memoize(f):
     """
@@ -32,4 +24,12 @@ def memoize(f):
     MemoCache is a dict-like, so you can also inspect its memoized keys
     and values.
     """
-    return MemoCache(f)
+    cache = {}
+    @wraps(f)
+    def memo(*args):
+        if not args in cache:
+            cache[args] = f(*args)
+        return cache[args]
+    # Expose cache on function so it can be inspected and cleared.
+    memo.cache = cache
+    return memo
