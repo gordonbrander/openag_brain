@@ -46,7 +46,7 @@ def publisher_memo(topic, type, queue_size=10):
     A memoized publisher function which will return a cached publisher
     instance for the same topic, type and queue_size.
     """
-    return rospy.Publisher(topic, Float64, queue_size)
+    return rospy.Publisher(topic, Float64, queue_size=queue_size)
 
 @multidispatch(lambda x: x.get("type", "simple"))
 def interpret_recipe(recipe):
@@ -93,7 +93,7 @@ def simple_recipe(recipe, start_time=None, timeout=1):
     yield (time.time(), RECIPE_END.name, recipe["_id"])
 
 def run_recipe(
-    recipe_flag, setpoints, put, publisher,
+    recipe_flag, setpoints, put,
     recipe_id, environment, start_time=None
 ):
     set_if_clear(recipe_flag)
@@ -107,11 +107,11 @@ def run_recipe(
         if not recipe_flag.is_set():
             break
 
-        pub = publisher("desired/{}".format(variable), Float64, 10)
-        pub(value)
+        pub = publisher_memo("desired/{}".format(variable), Float64, 10)
+        pub.publish(value)
 
         # Advance state
-        prev = prev_values[variable]
+        prev = prev_values.get(variable, None)
         prev_values[variable] = value
         # Store unique datapoints
         if prev != value:
@@ -126,7 +126,7 @@ def run_recipe(
                 "timestamp": timestamp
             })
             doc_id = gen_doc_id(time.time())
-            self.put(doc_id, doc)
+            put(doc_id, doc)
     rospy.set_param(params.CURRENT_RECIPE, "")
     rospy.set_param(params.CURRENT_RECIPE_START, 0)
     recipe_flag.clear()
@@ -138,7 +138,7 @@ class RecipeHandler:
         self.recipe_flag = Event()
         self.environment = environment
 
-    def put(id, doc):
+    def put(self, id, doc):
         """
         This method is here so we can send an opaque side-effect function to the
         recipe child process, limiting the exposed API surface. The details of
@@ -164,7 +164,7 @@ class RecipeHandler:
         proc = Process(
             target=run_recipe,
             args=(
-                self.recipe_flag, setpoints, self.put, publisher_memo,
+                self.recipe_flag, setpoints, self.put,
                 recipe_id, self.environment, start_time
             )
         )
