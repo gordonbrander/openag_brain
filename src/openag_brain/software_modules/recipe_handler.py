@@ -155,6 +155,7 @@ class RecipeHandler:
         Returns a process object, but does not start it.
         When to start is up to consumer.
         """
+        recipe_id = recipe["_id"]
         setpoints = interpret_recipe(recipe)
         # Refuse to create process if recipe is currently running
         if self.recipe_flag.is_set():
