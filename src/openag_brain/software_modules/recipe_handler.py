@@ -77,7 +77,7 @@ def simple_recipe(recipe, start_time=None, timeout=1):
     # Create a state object to accrue recipe setpoint values.
     state = {}
     # Start by yielding a RECIPE_START setpoint
-    yield (start_time, RECIPE_START.value, recipe["_id"])
+    yield (start_time, RECIPE_START.name, recipe["_id"])
     for t, variable, value in recipe["operations"]:
         # While we wait for time to catch up to timestamp, yield the
         # previous state once every second.
@@ -90,7 +90,7 @@ def simple_recipe(recipe, start_time=None, timeout=1):
         # start yielding the present state again.
         state[variable] = value
     # We're done! Yield a RECIPE_END setpoint
-    yield (time.time(), RECIPE_END.value, recipe["_id"])
+    yield (time.time(), RECIPE_END.name, recipe["_id"])
 
 def run_recipe(
     recipe_flag, setpoints, put, publisher,
