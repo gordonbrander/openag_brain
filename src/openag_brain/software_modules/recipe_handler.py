@@ -41,12 +41,12 @@ def set_if_clear(event):
     return event
 
 @memoize
-def publisher_memo(topic, type, queue_size=10):
+def publisher_memo(topic, MsgType, queue_size=10):
     """
     A memoized publisher function which will return a cached publisher
     instance for the same topic, type and queue_size.
     """
-    return rospy.Publisher(topic, Float64, queue_size=queue_size)
+    return rospy.Publisher(topic, MsgType, queue_size=queue_size)
 
 @multidispatch(lambda x: x.get("type", "simple"))
 def interpret_recipe(recipe):
@@ -107,7 +107,8 @@ def run_recipe(
         if not recipe_flag.is_set():
             break
 
-        pub = publisher_memo("desired/{}".format(variable), Float64, 10)
+        topic_name = "desired/{}".format(variable)
+        pub = publisher_memo(topic_name, Float64, queue_size=10)
         pub.publish(value)
 
         # Advance state
