@@ -27,21 +27,8 @@ from openag_brain.utils import gen_doc_id
 from openag_brain.memoize import memoize
 from openag_brain.multidispatch import multidispatch
 
-class EventAlreadySetError(Exception):
-    pass
-
-def set_if_clear(event):
-    """
-    This function is used to ensure set on an event is only called if
-    the current state of the event is unset
-    """
-    if event.is_set():
-        raise EventAlreadySetError()
-    event.set()
-    return event
-
 @memoize
-def publisher_memo(topic, MsgType, queue_size=10):
+def publisher_memo(topic, MsgType, queue_size):
     """
     A memoized publisher function which will return a cached publisher
     instance for the same topic, type and queue_size.
@@ -57,8 +44,23 @@ def interpret_recipe(recipe):
 @interpret_recipe.register("simple")
 class SimpleRecipe:
     def __init__(self, recipe, start_time=None, timeout=1):
+        """
+        This class serves as a good example of how to create recipe
+        interpreters. A recipe interpreter is a class which:
+
+        - Takes a recipe description object of whatever format it supports
+        - A start_time
+        - A timeout
+
+        ...and is able to generate setpoint tuples via Python's iterator
+        interface. Setpoint tuples are of format
+        `(timestamp, variable, value)`.
+
+        Recipe interpreter classes must also expose an ID and start_time
+        field.
+        """
         self.start_time = start_time or time.time()
-        self.id = recipe["id"]
+        self.id = recipe["_id"]
         self.operations = recipe["operations"]
         self.timeout = timeout
 
@@ -66,16 +68,6 @@ class SimpleRecipe:
         """
         Create a blocking recipe generator for simple recipes.
         Yields a series of setpoints for current time.
-
-        This function serves as a good example of how to create recipe interpreters.
-        A recipe interpreter is a function which:
-
-        - Takes a recipe description object of whatever format it supports
-        - A start_time
-        - A timeout
-
-        ...and is able to generate setpoint tuples via Python's generator interface.
-        Setpoint tuples are of format `(timestamp, variable, value)`.
 
         Recipe interpreters are responsible for generating a recipe_start
         setpoint at the beginning and a recipe_end setpoint at the end.
@@ -94,12 +86,15 @@ class SimpleRecipe:
             while t > time.time() - start_time:
                 for variable, value in state.iteritems():
                     yield (time.time(), variable, value)
-                    rospy.sleep(timeout)
+                rospy.sleep(timeout)
             # Ok, setpoint has reached the present. Assign it to state.
             # Then loop until we hit a future state, at which point, we
             # start yielding the present state again.
             state[variable] = value
-        # We're done! Yield a RECIPE_END setpoint
+        # We're done! Yield any final state changes we may have picked up
+        # on the last iteration, then yield a RECIPE_END setpoint.
+        for variable, value in state.iteritems():
+            yield (time.time(), variable, value)
         yield (time.time(), RECIPE_END.name, recipe_id)
 
 class RecipeRunningError(Exception):
@@ -120,18 +115,18 @@ class RecipeHandler:
         self.environment = environment
         self.__recipe = None
 
-    def get_recipe():
+    def get_recipe(self):
         with self.lock:
             return self.__recipe
 
-    def set_recipe(id, recipe, start_time=None):
+    def set_recipe(self, recipe):
         with self.lock:
             if self.__recipe is not None:
                 raise RecipeRunningError("Recipe is already running")
             self.__recipe = recipe
         return self
 
-    def clear_recipe(recipe):
+    def clear_recipe(self):
         with self.lock:
             if self.__recipe is None:
                 raise RecipeIdleError("No recipe is running")
@@ -152,7 +147,7 @@ class RecipeHandler:
                         break
 
                     topic_name = "desired/{}".format(variable)
-                    pub = publisher_memo(topic_name, Float64, queue_size=10)
+                    pub = publisher_memo(topic_name, Float64, 10)
                     pub.publish(value)
 
                     # Advance state
