@@ -12,17 +12,17 @@ def memoize(f):
 
         @memoize
         def foo(x, y): return x + y
-
-    The returned MemoCache instance is a callable::
-
         foo(1, 2) # 3
 
-    You can also invalidate the cache by calling method `clear`::
+    Memoized function uses identiy of arguments to cache results, so arguments
+    must be hashable, and only positional arguments are supported.
 
-        foo.clear()
+    Memoized function's cache is stored on the `cache` property of the
+    function, so you can also inspect its memoized values and clear the cache.
 
-    MemoCache is a dict-like, so you can also inspect its memoized keys
-    and values.
+        foo.cache.items() # [((1, 2), 3)]
+        foo.cache.clear()
+        foo.cache.items() # []
     """
     cache = {}
     @wraps(f)
