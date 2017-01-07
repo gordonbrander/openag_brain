@@ -18,7 +18,7 @@ def multidispatch(key):
 
     Usage::
 
-        @multimethod(lambda x: type(x).__name__)
+        @multidispatch(lambda x: type(x).__name__)
         def add(x): return 'default'
 
         @add.register('float')
@@ -38,6 +38,10 @@ def multidispatch(key):
             method = methods.get(key(*args), f)
             return method(*args, **kwargs)
         def register(k):
+            """
+            Register a function at key by using this function as a decorator
+            factory
+            """
             def decorate(f):
                 methods[k] = f
                 return f
