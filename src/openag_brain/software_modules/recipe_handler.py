@@ -68,9 +68,6 @@ class SimpleRecipe:
         """
         Create a blocking recipe generator for simple recipes.
         Yields a series of setpoints for current time.
-
-        Recipe interpreters are responsible for generating a recipe_start
-        setpoint at the beginning and a recipe_end setpoint at the end.
         """
         # Create a state object to accrue recipe setpoint values.
         start_time = self.start_time
@@ -167,6 +164,7 @@ class RecipeHandler:
                         })
                         doc_id = gen_doc_id(time.time())
                         self.env_data_db[doc_id] = doc
+                self.clear_recipe()
                 rospy.set_param(params.CURRENT_RECIPE, "")
                 rospy.set_param(params.CURRENT_RECIPE_START, 0)
             rospy.sleep(1)
