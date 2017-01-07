@@ -133,7 +133,7 @@ class RecipeHandler:
 
     def clear_recipe(recipe):
         with self.lock:
-            if self.__recipe == None
+            if self.__recipe is None:
                 raise RecipeIdleError("No recipe is running")
             self.__recipe = None
         return self
