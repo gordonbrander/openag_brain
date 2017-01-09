@@ -17,7 +17,7 @@ import rospy
 from openag.db_names import ENVIRONMENTAL_DATA_POINT, RECIPE
 from openag.cli.config import config as cli_config
 from openag.models import EnvironmentalDataPoint
-from openag.var_types import RECIPE_START, RECIPE_END
+from openag.var_types import RECIPE_START, RECIPE_END, EnvVar
 from couchdb import Server
 from std_msgs.msg import Float64
 from threading import RLock
@@ -26,6 +26,9 @@ from openag_brain.srv import StartRecipe, Empty
 from openag_brain.utils import gen_doc_id
 from openag_brain.memoize import memoize
 from openag_brain.multidispatch import multidispatch
+
+# Create a tuple constant of valid environmental variables
+VALID_VARIABLES = tuple(EnvVar.items.keys())
 
 @memoize
 def publisher_memo(topic, MsgType, queue_size):
@@ -49,7 +52,7 @@ class SimpleRecipe:
         interpreters. A recipe interpreter is a class which:
 
         - Takes a recipe description object of whatever format it supports
-        - A start_time
+        - A start_time (to restart a recipe started in the past)
         - A timeout
 
         ...and is able to generate setpoint tuples via Python's iterator
@@ -59,7 +62,11 @@ class SimpleRecipe:
         Recipe interpreter classes must also expose an ID and start_time
         field.
         """
-        self.start_time = start_time or time.time()
+        init_time = time.time()
+        start_time = start_time or init_time
+        if start_time > init_time:
+            raise ValueError("Recipes cannot be scheduled for the future")
+        self.start_time = start_time
         self.id = recipe["_id"]
         self.operations = recipe["operations"]
         self.timeout = timeout
@@ -70,29 +77,33 @@ class SimpleRecipe:
         Yields a series of setpoints for current time.
         """
         # Create a state object to accrue recipe setpoint values.
-        start_time = self.start_time
-        recipe_id = self.id
-        operations = self.operations
-        timeout = self.timeout
         state = {}
-        # Start by yielding a RECIPE_START setpoint
-        yield (start_time, RECIPE_START.name, recipe_id)
-        for t, variable, value in operations:
+        # If start time was now (or in the very recent past), yield
+        # a recipe start setpoint.
+        if time.time() - self.start_time < 1:
+            yield (start_time, RECIPE_START.name, self.id)
+        for t, variable, value in self.operations:
             # While we wait for time to catch up to timestamp, yield the
             # previous state once every second.
-            while t > time.time() - start_time:
-                for variable, value in state.iteritems():
-                    yield (time.time(), variable, value)
-                rospy.sleep(timeout)
+            while t > time.time() - self.start_time:
+                # Make sure the variable names in this inner loop are different
+                # from the ones above. Python scopes loop variables to the
+                # function level (not the loop level). Ran afoul of scoping
+                # bug here in the past.
+                # http://eli.thegreenplace.net/2015/the-scope-of-index-variables-in-pythons-for-loops/
+                # 2017-01-09 @gordonbrander
+                for state_variable, state_value in state.iteritems():
+                    yield (time.time(), state_variable, state_value)
+                rospy.sleep(self.timeout)
             # Ok, setpoint has reached the present. Assign it to state.
             # Then loop until we hit a future state, at which point, we
             # start yielding the present state again.
             state[variable] = value
-        # We're done! Yield any final state changes we may have picked up
+        # We're done! Yield any final state changes we picked up
         # on the last iteration, then yield a RECIPE_END setpoint.
-        for variable, value in state.iteritems():
+        for state_variable, state_value in state.iteritems():
             yield (time.time(), variable, value)
-        yield (time.time(), RECIPE_END.name, recipe_id)
+        yield (time.time(), RECIPE_END.name, self.id)
 
 class RecipeRunningError(Exception):
     """Thrown when trying to set a recipe, but recipe is already running."""
@@ -132,7 +143,11 @@ class RecipeHandler:
 
     def loop(self):
         while not rospy.is_shutdown():
+            # Check for a recipe
             recipe = self.get_recipe()
+            # If we have a recipe, process it. Running a recipe is a blocking
+            # operation, so the recipe will stay in this turn of the loop
+            # until it is finished.
             if recipe:
                 rospy.set_param(params.CURRENT_RECIPE, recipe.id)
                 rospy.set_param(params.CURRENT_RECIPE_START, recipe.start_time)
@@ -143,9 +158,20 @@ class RecipeHandler:
                     if not self.get_recipe():
                         break
 
-                    topic_name = "desired/{}".format(variable)
-                    pub = publisher_memo(topic_name, Float64, 10)
-                    pub.publish(value)
+                    # Skip invalid variable types
+                    if variable not in VALID_VARIABLES:
+                        msg = 'Recipe references invalid variable "{}"'
+                        rospy.logwarn(msg.format(variable))
+                        continue
+
+                    # Publish any setpoints that coerce to float
+                    try:
+                        float_value = float(value)
+                        topic_name = "desired/{}".format(variable)
+                        pub = publisher_memo(topic_name, Float64, 10)
+                        pub.publish(float_value)
+                    except ValueError:
+                        pass
 
                     # Advance state
                     prev = state.get(variable, None)
