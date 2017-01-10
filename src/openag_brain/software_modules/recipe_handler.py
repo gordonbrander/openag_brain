@@ -81,7 +81,7 @@ class SimpleRecipe:
         # If start time was now (or in the very recent past), yield
         # a recipe start setpoint.
         if time.time() - self.start_time < 1:
-            yield (start_time, RECIPE_START.name, self.id)
+            yield (self.start_time, RECIPE_START.name, self.id)
         for t, variable, value in self.operations:
             # While we wait for time to catch up to timestamp, yield the
             # previous state once every second.
@@ -154,8 +154,9 @@ class RecipeHandler:
                 rospy.loginfo('Starting recipe "{}"'.format(recipe.id))
                 state = {}
                 for timestamp, variable, value in recipe:
-                    # If recipe was canceled, break setpoint iteration
-                    if not self.get_recipe():
+                    # If recipe was canceled, or ROS stopped, break setpoint
+                    # iteration
+                    if not self.get_recipe() or rospy.is_shutdown():
                         break
 
                     # Skip invalid variable types
