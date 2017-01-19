@@ -128,19 +128,29 @@ class PhasedRecipeInterpreter:
 
     def __iter__(self):
         yield (rospy.get_time(), RECIPE_START.name, self.id)
+        end_of_stage = self.start_time
+        end_of_phase = self.start_time
         for stage in self.stages:
             stage_duration = days_to_seconds(stage["days"])
-            end_of_stage = (rospy.get_time() - self.start_time) + stage_duration
-            phases = ("day", "night")
-            phase_count = 1
-            while (rospy.get_time() - self.start_time) < end_of_stage:
-                phase = stage[phases[phase_count % 2]]
+            end_of_stage += stage_duration
+            phase_count = 0
+            while rospy.get_time() < end_of_stage:
                 phase_count += 1
+                # Find phase key. We alternate between day/night, so the modulo
+                # of the count will give us the phase we are in. Days are odd
+                # nights are even.
+                phase_key = "day" if phase_count % 2 else "night"
+                phase = stage[phase_key]
                 phase_keys = frozenset(phase.keys())
                 phase_duration = hrs_to_seconds(phase["hours"])
-                end_of_phase = (rospy.get_time() - self.start_time) + phase_duration
-                while (rospy.get_time() - self.start_time) < end_of_phase:
+                # End the phase either at phase end or at stage end,
+                # whichever comes sooner. This handles the case where
+                # phases don't divide up evenly.
+                end_of_phase = min(end_of_phase + phase_duration, end_of_stage)
+                while rospy.get_time() < end_of_phase:
                     for key in VALID_VARIABLES.intersection(phase_keys):
+                        # We coerce to float because yaml value may be
+                        # int or float.
                         yield (rospy.get_time(), key, float(phase[key]))
                     rospy.sleep(self.timeout)
         yield (rospy.get_time(), RECIPE_END.name, self.id)
