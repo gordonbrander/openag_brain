@@ -145,8 +145,9 @@ catkin_package(
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
+# Mark executable scripts (Python etc.) for installation
+# in contrast to setup.py, you can choose the destination
+# - gordonb 2017-03-15
 install(PROGRAMS
   scripts/main
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -175,6 +176,14 @@ install(PROGRAMS
 #   FILES_MATCHING PATTERN "*.h"
 #   PATTERN ".svn" EXCLUDE
 # )
+
+# Install everything in the launch/ directory.
+# This CMake macro can also be used to install data files, etc.
+# See http://wiki.ros.org/catkin/CMakeLists.txt#Installing_roslaunch_Files_or_Other_Resources
+# - gordonb 2017-03-15
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  PATTERN ".svn" EXCLUDE)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
