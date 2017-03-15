@@ -148,18 +148,8 @@ catkin_package(
 # Mark executable scripts (Python etc.) for installation
 # in contrast to setup.py, you can choose the destination
 # - gordonb 2017-03-15
-install(PROGRAMS
-  scripts/main
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(PROGRAMS
-  scripts/flash
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-install(PROGRAMS
-  scripts/install_pio
+catkin_install_python(PROGRAMS
+  scripts/main scripts/flash scripts/install_pio
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
