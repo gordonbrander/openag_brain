@@ -6,6 +6,15 @@ categories:
 - persistence
 - control
 firmware_module:
+- _id: air_flush_1
+  arguments:
+  - 36
+  - true
+  environment: environment_1
+  type: air_flush
+  inputs:
+    cmd:
+      variable: air_flush_on
 - _id: led_red_1
   arguments:
   - 42
@@ -84,6 +93,7 @@ firmware_module:
     cmd:
       variable: water_level_high
       multiplier: -1
+      deadband: -0.5
 - _id: heater_core_1_1
   arguments:
   - 43
@@ -122,12 +132,15 @@ firmware_module:
     cmd:
       variable: air_temperature
       multiplier: -1
+# This configuration sets up a second chiller pin that does not
+# rely on pulse modulation HW. Instead, it uses the tone_actuator firmware
+# to modulate in software.
 - _id: chiller_compressor_1
   arguments:
-  - 10
+  - 9
   - false
   environment: environment_1
-  type: binary_actuator
+  type: tone_actuator
   inputs:
     cmd:
       variable: air_temperature
