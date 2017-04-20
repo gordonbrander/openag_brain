@@ -22,6 +22,7 @@ from std_msgs.msg import Float64
 from threading import RLock
 from openag_brain import params, services
 from openag_brain.srv import StartRecipe, Empty
+from openag_brain.msg import DesiredFloat64
 from openag_brain.utils import gen_doc_id, read_environment_from_ns
 from openag_brain.memoize import memoize
 from openag_brain.multidispatch import multidispatch
@@ -226,7 +227,7 @@ class RecipeHandler:
                     try:
                         float_value = float(value)
                         topic_name = "{}/desired".format(variable)
-                        pub = publisher_memo(topic_name, Float64, 10)
+                        pub = publisher_memo(topic_name, DesiredFloat64, 10)
                         pub.publish(float_value)
                     except ValueError:
                         pass

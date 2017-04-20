@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import Float64
+from openag_brain.msg import DesiredFloat64
 
 if __name__ == '__main__':
     rospy.init_node('direct_controller')
@@ -27,9 +28,9 @@ if __name__ == '__main__':
     state_pub = rospy.Publisher(state_pub_name, Float64, queue_size=10)
 
     def desired_callback(item):
-        command_pub.publish(item)
-        state_pub.publish(item)
+        command_pub.publish(item.data)
+        state_pub.publish(item.data)
 
-    desired_sub = rospy.Subscriber(desired_sub_name, Float64, desired_callback)
+    desired_sub = rospy.Subscriber(desired_sub_name, DesiredFloat64, desired_callback)
 
     rospy.spin()

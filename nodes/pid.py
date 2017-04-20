@@ -23,6 +23,7 @@ changed to 0.
 """
 import rospy
 from std_msgs.msg import Float64
+from openag_brain.msg import DesiredFloat64
 
 class PID:
     """ Discrete PID control """
@@ -103,11 +104,14 @@ if __name__ == '__main__':
         pub.publish(cmd)
 
     def set_point_callback(item):
-        pid.set_point = item.data
+        if item.should_disconnect_feedback:
+            pid.set_point = None
+        else:
+            pid.set_point = item.data
 
     state_sub = rospy.Subscriber(state_sub_name, Float64, state_callback)
     set_point_sub = rospy.Subscriber(
-        desired_sub_name, Float64, set_point_callback
+        desired_sub_name, DesiredFloat64, set_point_callback
     )
 
     rospy.spin()
