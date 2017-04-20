@@ -1,0 +1,2 @@
+float64 data
+bool should_disconnect_feedback
