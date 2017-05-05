@@ -2,7 +2,7 @@
 
 import rospy
 from openag.cli.config import config as cli_config
-from openag.utils import synthesize_firmware_module_info
+from openag_lib.firmware.util import synthesize_firmware_module_info
 from openag.models import FirmwareModule, FirmwareModuleType
 from couchdb import Server
 from openag_brain.msg import SensorInfo
