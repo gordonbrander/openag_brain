@@ -10,7 +10,7 @@ import threading
 import subprocess
 from openag.cli.config import config as cli_config
 from openag.couch import Server
-from openag.db_names import ENVIRONMENTAL_DATA_POINT
+from openag_brain.db_names import ENVIRONMENTAL_DATA_POINT
 from openag_brain.video_helpers import *
 from openag_brain.load_env_var_types import create_variables, VariableInfo
 # Filter a list of environmental variables that are specific to camera

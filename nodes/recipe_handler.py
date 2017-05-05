@@ -14,7 +14,7 @@ instance of this module per environment in the system.
 
 import time
 import rospy
-from openag.db_names import ENVIRONMENTAL_DATA_POINT, RECIPE
+from openag_brain.db_names import ENVIRONMENTAL_DATA_POINT, RECIPE
 from openag.cli.config import config as cli_config
 from openag.models import EnvironmentalDataPoint
 from couchdb import Server
